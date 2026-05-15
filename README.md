@@ -1,4 +1,4 @@
-# 🔍 NetScan — Network Port Scanner & Risk Analyzer
+# NetScan — Network Port Scanner & Risk Analyzer
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python" />
@@ -15,7 +15,7 @@
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 | Dashboard | Scan Detail | Report |
 |-----------|-------------|--------|
@@ -23,7 +23,7 @@
 
 ---
 
-## ✨ Features
+## Features
 
 - **Full port scanning** — Quick (top 1000), Full (all 65,535), or Service (version detection) modes
 - **Service detection** — Identifies software running on every open port (Apache, SSH, PostgreSQL, etc.)
@@ -37,7 +37,7 @@
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```
 Browser  ──►  FastAPI (port 8000)  ──►  SQLite DB
@@ -60,7 +60,7 @@ Browser  ──►  FastAPI (port 8000)  ──►  SQLite DB
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -123,7 +123,7 @@ Open your browser at `http://localhost:8000`
 
 ---
 
-## 🔐 Authentication
+## Authentication
 
 NetScan uses a single-admin model — one account with full access.
 
@@ -138,7 +138,7 @@ Passwords are stored using **PBKDF2-HMAC-SHA256** with 260,000 iterations and a 
 
 ---
 
-## 📡 Scan Types
+## Scan Types
 
 | Type | Ports | Speed | Use Case |
 |------|-------|-------|----------|
@@ -157,7 +157,7 @@ hostname.local       # Hostname
 
 ---
 
-## ⚠️ Risk Levels
+## Risk Levels
 
 | Level | Score | Description |
 |-------|-------|-------------|
@@ -170,7 +170,7 @@ hostname.local       # Hostname
 
 ---
 
-## 🗂 Project Structure
+## Project Structure
 
 ```
 NetScan/
@@ -214,7 +214,7 @@ NetScan/
 
 ---
 
-## 🌐 API Reference
+## API Reference
 
 All endpoints require authentication (session cookie) except `/health` and `/api/v1/auth/login`.
 
@@ -257,7 +257,7 @@ Interactive API docs available at `http://localhost:8000/api/docs` when running.
 
 ---
 
-## 🧪 Tests
+## Tests
 
 ```bash
 pytest tests/ -v
@@ -267,19 +267,19 @@ Current coverage: risk engine (13 tests) + authentication (8 tests) = 21 tests.
 
 ---
 
-## 🖥 Production Deployment (Windows)
+## Production Deployment (Windows)
 
 For running NetScan as a Windows Service that starts automatically on boot, see the full guide:
 
-👉 [docs/windows-deployment.md](docs/windows-deployment.md)
+[docs/windows-deployment.md](docs/windows-deployment.md)
 
 For Linux deployment with systemd, see:
 
-👉 [docs/linux-deployment.md](docs/linux-deployment.md)
+[docs/linux-deployment.md](docs/linux-deployment.md)
 
 ---
 
-## 🛡 Security Notes
+## Security Notes
 
 > **Legal:** Only scan networks and devices you own or have explicit written authorisation to scan. Unauthorised scanning is illegal.
 
@@ -289,7 +289,7 @@ For Linux deployment with systemd, see:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome.
 
@@ -317,13 +317,13 @@ No other changes needed — the rule is applied to all future scans automaticall
 
 ---
 
-## 📄 License
+## License
 
 MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-## 👤 Author
+## Author
 
 **Prince** ([@Blackout-26](https://github.com/Blackout-26))
 
