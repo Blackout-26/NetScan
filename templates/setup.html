@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetScan — First Time Setup</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <style>
+    :root { --ns-dark:#0f172a; --ns-panel:#1e293b; --ns-border:#334155; --ns-accent:#38bdf8; }
+    body {
+      background: var(--ns-dark);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+    .setup-card {
+      background: var(--ns-panel);
+      border: 1px solid var(--ns-border);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 25px 50px rgba(0,0,0,.5);
+    }
+    .brand { font-size: 1.8rem; font-weight: 800; color: var(--ns-accent); }
+    .brand span { color: #f1f5f9; }
+    .form-control {
+      background: #0f172a; border: 1px solid var(--ns-border);
+      color: #e2e8f0; border-radius: 8px;
+    }
+    .form-control:focus {
+      background: #0f172a; border-color: var(--ns-accent);
+      color: #e2e8f0; box-shadow: 0 0 0 3px rgba(56,189,248,.15);
+    }
+    .form-label { color: #94a3b8; font-size: .875rem; }
+    .btn-setup {
+      background: var(--ns-accent); color: #0f172a;
+      font-weight: 700; border: none; border-radius: 8px;
+      padding: .7rem; font-size: 1rem;
+    }
+    .btn-setup:hover { opacity: .9; color: #0f172a; }
+    .req-item { font-size: .78rem; color: #64748b; }
+    .req-item.met { color: #4ade80; }
+    .req-item i { margin-right: 4px; }
+    .warning-box {
+      background: rgba(251,191,36,.08);
+      border: 1px solid rgba(251,191,36,.25);
+      border-radius: 8px; padding: .8rem 1rem;
+      font-size: .85rem; color: #fcd34d;
+    }
+    .alert-error {
+      background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+      color: #fca5a5; border-radius: 8px; padding: .75rem 1rem; font-size: .875rem;
+    }
+    .eye-toggle {
+      background: #0f172a; border: 1px solid var(--ns-border);
+      border-left: none; color: #64748b; cursor: pointer;
+      border-radius: 0 8px 8px 0;
+    }
+    .eye-toggle:hover { color: var(--ns-accent); background: #0f172a; }
+  </style>
+</head>
+<body>
+<div class="setup-card">
+  <div class="text-center mb-3">
+    <div class="brand mb-1"><i class="bi bi-radar"></i> Net<span>Scan</span></div>
+  </div>
+
+  <div class="warning-box mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>First-time setup required.</strong><br>
+    You must replace the default credentials before using NetScan.
+    Choose something strong — this account controls your entire network scanner.
+  </div>
+
+  <div id="error-box" class="alert-error mb-3 d-none"></div>
+
+  <div>
+    <div class="mb-3">
+      <label class="form-label">New Username</label>
+      <input id="new-username" type="text" class="form-control" placeholder="e.g. netscan_admin" autocomplete="username" />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">New Password</label>
+      <div class="input-group">
+        <input id="new-password" type="password" class="form-control" placeholder="••••••••••••" autocomplete="new-password" oninput="checkStrength()" />
+        <button class="eye-toggle btn" type="button" onclick="toggleVis('new-password', 'eye1')">
+          <i class="bi bi-eye" id="eye1"></i>
+        </button>
+      </div>
+      <!-- Password strength requirements -->
+      <div class="mt-2 ps-1">
+        <div class="req-item" id="req-length"><i class="bi bi-circle"></i>At least 8 characters</div>
+        <div class="req-item" id="req-upper"><i class="bi bi-circle"></i>At least one uppercase letter</div>
+        <div class="req-item" id="req-digit"><i class="bi bi-circle"></i>At least one digit</div>
+      </div>
+    </div>
+    <div class="mb-4">
+      <label class="form-label">Confirm Password</label>
+      <div class="input-group">
+        <input id="confirm-password" type="password" class="form-control" placeholder="••••••••••••" autocomplete="new-password" />
+        <button class="eye-toggle btn" type="button" onclick="toggleVis('confirm-password', 'eye2')">
+          <i class="bi bi-eye" id="eye2"></i>
+        </button>
+      </div>
+    </div>
+    <button id="btn-setup" class="btn btn-setup w-100" type="button" onclick="doSetup()">
+      <i class="bi bi-check-circle me-2"></i>Save Credentials & Continue
+    </button>
+  </div>
+</div>
+
+<script>
+const API = '/api/v1';
+
+function toggleVis(inputId, iconId) {
+  const el = document.getElementById(inputId);
+  const icon = document.getElementById(iconId);
+  el.type = el.type === 'password' ? 'text' : 'password';
+  icon.className = el.type === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+}
+
+function checkStrength() {
+  const pw = document.getElementById('new-password').value;
+  const setReq = (id, met) => {
+    const el = document.getElementById(id);
+    el.className = 'req-item' + (met ? ' met' : '');
+    el.querySelector('i').className = met ? 'bi bi-check-circle-fill' : 'bi bi-circle';
+  };
+  setReq('req-length', pw.length >= 8);
+  setReq('req-upper', /[A-Z]/.test(pw));
+  setReq('req-digit', /\d/.test(pw));
+}
+
+async function doSetup() {
+  const newUsername = document.getElementById('new-username').value.trim();
+  const newPassword = document.getElementById('new-password').value;
+  const confirmPassword = document.getElementById('confirm-password').value;
+  const btn = document.getElementById('btn-setup');
+  const errBox = document.getElementById('error-box');
+
+  errBox.classList.add('d-none');
+
+  if (!newUsername || !newPassword || !confirmPassword) {
+    errBox.textContent = 'All fields are required.';
+    errBox.classList.remove('d-none');
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    errBox.textContent = 'Passwords do not match.';
+    errBox.classList.remove('d-none');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+
+  try {
+    const res = await fetch(`${API}/auth/update-credentials`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        new_username: newUsername,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      }),
+      credentials: 'same-origin',
+    });
+    const data = await res.json();
+    if (res.ok) {
+      window.location.href = '/';
+    } else {
+      errBox.textContent = data.detail || 'Update failed.';
+      errBox.classList.remove('d-none');
+    }
+  } catch (e) {
+    errBox.textContent = 'Network error.';
+    errBox.classList.remove('d-none');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Save Credentials & Continue';
+  }
+}
+
+document.getElementById('new-username').focus();
+</script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetScan — Scan Detail</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <style>
+    :root { --ns-dark:#0f172a; --ns-panel:#1e293b; --ns-border:#334155; --ns-accent:#38bdf8; }
+    body { background:var(--ns-dark); color:#e2e8f0; }
+    .sidebar { width:240px; min-height:100vh; background:var(--ns-panel); border-right:1px solid var(--ns-border); position:fixed; top:0; left:0; z-index:100; }
+    .sidebar .brand { font-size:1.4rem; font-weight:700; color:var(--ns-accent); padding:1.25rem 1.5rem; border-bottom:1px solid var(--ns-border); }
+    .sidebar .brand span { color:#f1f5f9; }
+    .sidebar .nav-link { color:#94a3b8; padding:.65rem 1.5rem; display:flex; align-items:center; gap:.6rem; font-size:.9rem; }
+    .sidebar .nav-link:hover { background:rgba(56,189,248,.08); color:var(--ns-accent); }
+    .main { margin-left:240px; padding:2rem; }
+    .card-dark { background:var(--ns-panel); border:1px solid var(--ns-border); border-radius:12px; }
+    .badge-High   { background:#fee2e2; color:#991b1b; }
+    .badge-Medium { background:#fef3c7; color:#92400e; }
+    .badge-Low    { background:#dcfce7; color:#166534; }
+    .badge-Info   { background:#f1f5f9; color:#475569; }
+    .table-dark-ns th { background:#1e293b; color:#94a3b8; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--ns-border); }
+    .table-dark-ns td { border-bottom:1px solid #1e293b; font-size:.875rem; vertical-align:middle; }
+    .table-dark-ns { background:var(--ns-panel); color:#e2e8f0; }
+    .pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .rec-box { background:#0f172a; border-left:3px solid var(--ns-accent); padding:.6rem .9rem; border-radius:4px; font-size:.82rem; color:#94a3b8; margin-top:.4rem; }
+    .cve-tag { font-size:.7rem; background:#1e293b; border:1px solid #334155; color:#f87171; border-radius:4px; padding:2px 6px; margin:2px; display:inline-block; }
+  </style>
+</head>
+<body>
+<nav class="sidebar d-flex flex-column">
+  <div class="brand"><i class="bi bi-radar"></i> Net<span>Scan</span></div>
+  <ul class="nav flex-column mt-2">
+    <li><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+    <li><a class="nav-link" href="/scans"><i class="bi bi-list-check"></i> Scan History</a></li>
+    <li><a class="nav-link" href="/settings"><i class="bi bi-gear"></i> Settings</a></li>
+    <li><a class="nav-link" href="/api/docs"><i class="bi bi-code-slash"></i> API Docs</a></li>
+  </ul>
+  <div class="mt-auto p-3">
+    <button class="btn btn-outline-danger btn-sm w-100" onclick="fetch('/api/v1/auth/logout',{method:'POST',credentials:'same-origin'}).then(()=>window.location.href='/login')">
+      <i class="bi bi-box-arrow-right me-1"></i>Logout
+    </button>
+  </div>
+</nav>
+
+<main class="main">
+  <a href="/scans" class="btn btn-sm btn-outline-secondary mb-3"><i class="bi bi-arrow-left me-1"></i>Back to Scans</a>
+
+  <!-- ── Scan Header ───────────────────────────────────────────────────────── -->
+  <div class="card-dark p-4 mb-4" id="scan-header">
+    <div class="d-flex align-items-center gap-3">
+      <div class="fs-3 pulse text-info" id="status-icon"><i class="bi bi-hourglass-split"></i></div>
+      <div>
+        <h2 class="mb-0 fs-4" id="scan-target-title">Loading scan…</h2>
+        <div class="text-muted small" id="scan-meta"></div>
+      </div>
+      <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-outline-info btn-sm" id="btn-report-pdf" disabled>
+          <i class="bi bi-file-earmark-pdf me-1"></i>PDF Report
+        </button>
+        <button class="btn btn-outline-success btn-sm" id="btn-report-json" disabled>
+          <i class="bi bi-file-code me-1"></i>JSON
+        </button>
+        <button class="btn btn-outline-warning btn-sm" id="btn-report-csv" disabled>
+          <i class="bi bi-filetype-csv me-1"></i>CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Devices ───────────────────────────────────────────────────────────── -->
+  <div id="devices-section" class="d-none">
+    <h5 class="mb-3 text-info"><i class="bi bi-hdd-network me-2"></i>Discovered Devices (<span id="device-count">0</span>)</h5>
+    <div id="devices-list"></div>
+  </div>
+
+  <div id="empty-state" class="d-none text-center py-5 text-muted">
+    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+    No devices found in this scan.
+  </div>
+
+  <div id="loading-state" class="text-center py-5 text-muted">
+    <div class="spinner-border text-info mb-3" role="status"></div>
+    <p>Scan in progress — results will appear here automatically.</p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const SCAN_UUID = '{{ scan_uuid }}';
+const API = '/api/v1';
+let pollTimer = null;
+let scanCompleted = false;
+
+const STATUS_ICONS = {
+  pending:   '<i class="bi bi-hourglass-split text-secondary pulse"></i>',
+  running:   '<i class="bi bi-arrow-repeat text-primary pulse"></i>',
+  completed: '<i class="bi bi-check-circle-fill text-success"></i>',
+  failed:    '<i class="bi bi-x-circle-fill text-danger"></i>',
+  cancelled: '<i class="bi bi-slash-circle text-warning"></i>',
+};
+
+const RISK_COLORS = { High:'danger', Medium:'warning', Low:'success', Info:'secondary' };
+
+function riskBadge(r) {
+  return `<span class="badge badge-${r} px-2">${r}</span>`;
+}
+
+async function loadScan() {
+  const r = await fetch(`${API}/scans/${SCAN_UUID}`);
+  if (!r.ok) return;
+  const scan = await r.json();
+
+  document.getElementById('scan-target-title').textContent = scan.target;
+  document.getElementById('status-icon').innerHTML = STATUS_ICONS[scan.status] || '';
+  document.getElementById('scan-meta').innerHTML =
+    `<b>Type:</b> ${scan.scan_type} &nbsp;|&nbsp; <b>Status:</b> ${scan.status} &nbsp;|&nbsp; ` +
+    `<b>UUID:</b> <code>${scan.uuid}</code> &nbsp;|&nbsp; ` +
+    `<b>Hosts:</b> ${scan.total_hosts} &nbsp;|&nbsp; <b>Open Ports:</b> ${scan.open_ports}`;
+
+  if (scan.status === 'completed') {
+    scanCompleted = true;
+    clearInterval(pollTimer);
+    document.getElementById('loading-state').classList.add('d-none');
+    ['btn-report-pdf','btn-report-json','btn-report-csv'].forEach(id => {
+      document.getElementById(id).disabled = false;
+    });
+    await loadDevices();
+  } else if (['failed','cancelled'].includes(scan.status)) {
+    clearInterval(pollTimer);
+    document.getElementById('loading-state').innerHTML =
+      `<div class="alert alert-danger d-inline-block">Scan ${scan.status}. ${scan.error_msg||''}</div>`;
+  }
+}
+
+async function loadDevices() {
+  const r = await fetch(`${API}/devices/?scan_uuid=${SCAN_UUID}&limit=200`);
+  if (!r.ok) return;
+  const data = await r.json();
+
+  document.getElementById('device-count').textContent = data.total;
+  const section = document.getElementById('devices-section');
+  const empty   = document.getElementById('empty-state');
+
+  if (!data.devices.length) {
+    empty.classList.remove('d-none');
+    return;
+  }
+  section.classList.remove('d-none');
+
+  const container = document.getElementById('devices-list');
+  container.innerHTML = data.devices.map(d => `
+    <div class="card-dark mb-3 p-0 overflow-hidden">
+      <div class="d-flex align-items-center px-4 py-3 border-bottom" style="border-color:#334155!important; background:#162032;">
+        <div class="me-3">
+          <div class="fw-bold text-info">${d.ip_address}</div>
+          <div class="text-muted small">${d.hostname || '—'}</div>
+        </div>
+        <div class="me-3 small text-muted">${d.os_guess || 'OS unknown'}</div>
+        <div class="me-3">${riskBadge(d.overall_risk)}</div>
+        <div class="ms-auto text-muted small">${d.open_ports} open port${d.open_ports!==1?'s':''}</div>
+      </div>
+      ${d.ports.length ? `
+      <div class="table-responsive">
+        <table class="table table-dark-ns mb-0">
+          <thead><tr>
+            <th>Port</th><th>Protocol</th><th>Service</th><th>Product</th><th>Version</th>
+            <th>Risk</th><th>Recommendation & CVEs</th>
+          </tr></thead>
+          <tbody>
+            ${d.ports.sort((a,b)=>a.port_number-b.port_number).map(p => `
+              <tr>
+                <td><b>${p.port_number}</b></td>
+                <td><span class="badge bg-secondary">${p.protocol.toUpperCase()}</span></td>
+                <td>${p.service}</td>
+                <td>${p.product||'—'}</td>
+                <td>${p.version||'—'}</td>
+                <td>${riskBadge(p.risk_level)}</td>
+                <td>
+                  <div class="rec-box">${p.recommendation}</div>
+                  ${p.cve_hints && JSON.parse(p.cve_hints).length ?
+                    JSON.parse(p.cve_hints).map(c=>`<span class="cve-tag">${c}</span>`).join('') : ''}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>` : '<div class="p-3 text-muted small">No open ports.</div>'}
+    </div>
+  `).join('');
+}
+
+async function generateReport(fmt) {
+  const btn = document.getElementById(`btn-report-${fmt}`);
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>Generating…`;
+  try {
+    const r = await fetch(`${API}/reports/`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({scan_uuid: SCAN_UUID, format: fmt}),
+    });
+    const rep = await r.json();
+    if (r.ok) {
+      window.open(`${API}/reports/${rep.uuid}/download`, '_blank');
+    } else {
+      alert(`Error: ${rep.detail}`);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = fmt === 'pdf'
+      ? '<i class="bi bi-file-earmark-pdf me-1"></i>PDF Report'
+      : fmt === 'json' ? '<i class="bi bi-file-code me-1"></i>JSON'
+      : '<i class="bi bi-filetype-csv me-1"></i>CSV';
+  }
+}
+
+document.getElementById('btn-report-pdf').addEventListener('click', () => generateReport('pdf'));
+document.getElementById('btn-report-json').addEventListener('click', () => generateReport('json'));
+document.getElementById('btn-report-csv').addEventListener('click', () => generateReport('csv'));
+
+loadScan();
+pollTimer = setInterval(loadScan, 5000);
+</script>
+</body>
+</html>

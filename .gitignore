@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment — NEVER commit this
+.env
+
+# Database — contains scan data
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Generated reports
+reports/
+
+# Logs
+logs/
+*.log
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Type checker
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Windows batch files with local paths (recreate from docs)
+start_api.bat
+start_worker.bat
